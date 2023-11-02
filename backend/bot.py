@@ -188,7 +188,11 @@ class MyBot(ActivityHandler):
     
     def process_file(self, file: Attachment) -> str:
         # file_download = FileDownloadInfo.deserialize(file.content)
-        file_path = "./upload/" + file.name
+        file_folder = "./upload"
+        # create folder if not exist
+        if not os.path.exists(file_folder):
+            os.makedirs(file_folder)
+        file_path = os.path.join(file_folder, file.name)
         response = requests.get(file.content_url, allow_redirects=True)
         # response = requests.get(file_download.download_url, allow_redirects=True)
         open(file_path, "wb").write(response.content)
