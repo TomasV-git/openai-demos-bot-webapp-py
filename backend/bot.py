@@ -47,6 +47,8 @@ from typing import Any, Dict, List, Optional, Awaitable, Callable, Tuple, Type, 
 from collections import OrderedDict
 import uuid
 
+import markdownify
+
 #####################
 
 
@@ -184,6 +186,10 @@ class MyBot(ActivityHandler):
     
     def format_response(self, response):
         # return re.sub(r"(\n\s*)+\n+", "\n\n", response).strip()
+
+        # convert html tags to markdown
+        response = markdownify.markdownify(response, heading_style="ATX")
+    
         return response.strip()
     
     def process_file(self, file: Attachment) -> str:

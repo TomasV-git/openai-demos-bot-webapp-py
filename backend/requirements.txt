@@ -17,3 +17,4 @@ botbuilder-integration-aiohttp>=4.14.4
 # streamlit
 python-dotenv
 # azure-ai-formrecognizer
+markdownify
