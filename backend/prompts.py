@@ -81,16 +81,15 @@ WELCOME_MESSAGE = """
 Hello and welcome! \U0001F44B
 
 My name is Jarvis, a smart virtual assistant designed to assist you.
-Here's how you can interact with me:
 
-I have various plugins and tools at my disposal to answer your questions effectively. Here are the available options:
+You can interact with me in classic ChatGPT-like mode, so I can draw upon my own knowledge based on the data I was trained on. Please note that my training data goes up until 2021.
 
-* \U0001F4A1 **@chatgpt**: With this tool, I can draw upon my own knowledge based on the data I was trained on. Please note that my training data goes up until 2021.
+I am also able to work with \U0001F50D **files (*.txt., *.md): This tool allows me to understand and search against your file (*.txt, *.md). To use that simply upload the file and then ask me a question about it.
 
-* \U0001F50D **@file**: This tool allows me to understand and search against your file (*.txt, *.md). To use that simply upload the file and then ask me a question about it.
+Give it a try!
 
-I'm here to assist you!
 ---
+
 based on model:
 """
 
