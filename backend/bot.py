@@ -179,11 +179,15 @@ class MyBot(ActivityHandler):
 
         return ordered_content
 
+    # currently a dummy function returns a random uuid
     def generate_index(self):
         return str(uuid.uuid4())    
+    
+    # currently a dummy function returns a random uuid
     def generate_doc_id(self):
         return str(uuid.uuid4())
     
+    # format the response (convert html to markdown)
     def format_response(self, response):
         # return re.sub(r"(\n\s*)+\n+", "\n\n", response).strip()
 
@@ -192,9 +196,18 @@ class MyBot(ActivityHandler):
     
         return response.strip()
     
+    # store the uploaded file in FAISS db
     def process_file(self, file: Attachment) -> str:
+        '''
+        Function to store the uploaded file in FAISS db.
+        It stores the file in ./upload folder and then load it into FAISS db.
+
+        Parameters:
+        file: Attachment object with content_url and name
+        '''
         # file_download = FileDownloadInfo.deserialize(file.content)
         file_folder = "./upload"
+
         # create folder if not exist
         if not os.path.exists(file_folder):
             os.makedirs(file_folder)
@@ -224,7 +237,8 @@ class MyBot(ActivityHandler):
         self.db = FAISS.from_documents(docs, embeddings)
 
         return "document loaded \n" + warning_msg + "\nYou can now ask questions about the document"
-        
+
+    # ask GPT    
     def ask_gpt(self, session_id):
         chatgpt_chain = LLMChain(
                                 llm=self.llm,
@@ -235,6 +249,7 @@ class MyBot(ActivityHandler):
         answer = chatgpt_chain.run(self.QUESTION)                        
         return answer
     
+    # ask GPT with sources in file
     def ask_gpt_with_sources(self, session_id):
         # remove the /file prefix
         QUESTION = self.QUESTION[5:].strip()
@@ -304,6 +319,7 @@ class MyBot(ActivityHandler):
             else turn_context.activity.attachments[0].content_type in self.ALLOWED_CONTENT_TYPES
         )
 
+        # store the uploaded file in FAISS db and returns success message
         if message_with_file_download:
             file = turn_context.activity.attachments[0]
             msg = self.process_file(file)
