@@ -85,15 +85,13 @@ Here's how you can interact with me:
 
 I have various plugins and tools at my disposal to answer your questions effectively. Here are the available options:
 
-2. \U0001F4A1 **@chatgpt**: With this tool, I can draw upon my own knowledge based on the data I was trained on. Please note that my training data goes up until 2021.
+* \U0001F4A1 **@chatgpt**: With this tool, I can draw upon my own knowledge based on the data I was trained on. Please note that my training data goes up until 2021.
 
-3. \U0001F50D **@file**: This tool allows me to understand and search against your file (*.txt, *.md). To use that simply upload the file and then ask me a question about it.
-
-From all of my sources, I will provide the necessary information and also mention the sources I used to derive the answer. This way, you can have transparency about the origins of the information and understand how I arrived at the response.
+* \U0001F50D **@file**: This tool allows me to understand and search against your file (*.txt, *.md). To use that simply upload the file and then ask me a question about it.
 
 I'm here to assist you!
-
 ---
+based on model:
 """
 
 
