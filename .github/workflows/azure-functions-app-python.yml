@@ -22,7 +22,7 @@ on:
   push:
     branches: ["main"]
     paths:
-      - 'frontend/**/*'
+      - 'backend/**/*'
 
 env:
   # AZURE_FUNCTIONAPP_NAME: 'webApp-Backend-BotId-7hld7ffw2k7qg'   # set this to your function app name on Azure
