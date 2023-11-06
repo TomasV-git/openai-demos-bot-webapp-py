@@ -231,12 +231,12 @@ class MyBot(ActivityHandler):
         embeddings = OpenAIEmbeddings()
         warning_msg = ""
         if (len(docs) > 16):
-            warning_msg = f"Only the first 16 chunks will be loaded (got {len(docs) } chunks for chunk size = {chunk_size})"
+            warning_msg = f"\U0001F6D1 Only the first 16 chunks will be loaded (got {len(docs) } chunks for chunk size = {chunk_size})"
             docs = docs[:16]
         
         self.db = FAISS.from_documents(docs, embeddings)
 
-        return "document loaded \n" + warning_msg + "\nYou can now ask questions about the document"
+        return f"\U00002705  {file.name} uploaded - ask your questions!\n{warning_msg}"
 
     # ask GPT    
     def ask_gpt(self, session_id):
