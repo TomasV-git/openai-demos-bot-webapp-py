@@ -11,8 +11,11 @@
       body {
           height: 100%;
           /* background-image: linear-gradient(slategrey, darkslategrey); */
-          background-image: linear-gradient( #343541,#525468);
-          color: antiquewhite;
+          /* background-image: linear-gradient( #121c84,#8278DA); */
+          /* background-image: linear-gradient(to bottom right, #FDFCFB, #E2D1C3); */
+          background-image: linear-gradient(to bottom, #eaecf0, #d9dbdf);
+          /* background-color: white; */
+          /* color: antiquewhite; */  
           font-family: 'Segoe UI', Calibri, sans-serif;
       }
 
@@ -23,13 +26,19 @@
       #webchat {
         height: 85%;
         width: 100%;
+        border-radius: 7px;
+        border-width: 0px;
+        /* background: #191d14; */
+        /* background-image: linear-gradient(to bottom right, #5761B2, #1FC5A8); */
+        /* background-image: linear-gradient(to bottom, #eaecf0, #d9dbdf); */
+        background-color: white;
+        padding: 0px;
       }
       .webchat__stacked-layout__main{
         white-space: break-spaces;
-        
       }
       .webchat__stacked-layout--from-user{
-        background-color: rgba(32,33,35, .2);
+        background-color: transparent;
       }
       
     </style>
@@ -37,20 +46,20 @@
   <body>
     
     <h1><img src='https://logos-world.net/wp-content/uploads/2021/02/Microsoft-Azure-Emblem.png' height="40">Azure OpenAI service - ChatGPT</h1>
-    <pre>version 20230320 | model: ChatGPT (turbo) | max_tokens: 1500 | temperature: 0.7 | Speech input enabled: true | Speech language: EN</pre> 
+    <pre>version 20231106 | model: ChatGPT (turbo) | max_tokens: 1500 | temperature: 0.7 | File plugin: True</pre> 
     <div style="" id="webchat" role="main"></div>
     <script>
       // Set  the CSS rules.
       const styleSet = window.WebChat.createStyleSet({
-          bubbleBackground: 'transparent',
-          bubbleBorderColor: 'darkslategrey',
+          bubbleBackground: '#edeff3',
+          bubbleBorderColor: 'rgba(250, 235, 215, .1)',
           bubbleBorderRadius: 5,
           bubbleBorderStyle: 'solid',
-          bubbleBorderWidth: 0,
-          bubbleTextColor: 'antiquewhite',
+          bubbleBorderWidth: 1,
+          bubbleTextColor: 'black',
 
           userAvatarBackgroundColor: 'rgba(53, 55, 64, .3)',
-          bubbleFromUserBackground: 'transparent', 
+          bubbleFromUserBackground: '#2483f3', 
           bubbleFromUserBorderColor: '#E6E6E6',
           bubbleFromUserBorderRadius: 5,
           bubbleFromUserBorderStyle: 'solid',
@@ -68,7 +77,8 @@
 
           rootHeight: '100%',
           rootWidth: '100%',
-          backgroundColor: 'rgba(70, 130, 180, .2)',
+          // backgroundColor: 'rgba(70, 130, 180, .9)',
+          backgroundColor: 'transparent',
 
           hideUploadButton: 'true'
       });
