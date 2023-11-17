@@ -6,3 +6,4 @@ langchain
 openai==0.28.1
 tiktoken
 markdownify
+faiss-cpu
