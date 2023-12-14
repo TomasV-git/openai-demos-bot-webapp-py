@@ -28,5 +28,3 @@ class StdOutCallbackHandler(BaseCallbackHandler):
 
     def on_agent_action(self, action: AgentAction, **kwargs: Any) -> Any:
         sys.stdout.write(f"{action.log}\n")
-               
-            

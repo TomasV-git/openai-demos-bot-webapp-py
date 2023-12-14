@@ -82,9 +82,9 @@ Hello and welcome! \U0001F44B
 
 My name is Jarvis, a smart virtual assistant designed to assist you.
 
-You can interact with me in classic ChatGPT-like mode, so I can draw upon my own knowledge based on the data I was trained on. Please note that my training data goes up until 2021.
+You can interact with me in classic ChatGPT-like mode, so I can draw upon my own knowledge based on the data I was trained on. Please note that my training data goes up until 2021 (2023*).
 
-\U0001F4E3 **Update**: I can also work with \U0001F50D **files** (*.txt., *.md)! Simply upload the file and then ask me a question about it.
+\U0001F4E3 **Update**: I can also work with \U0001F50D **bing** (*.txt., *.md)! Simply ask and I will try to find out.
 
 Give it a try!
 

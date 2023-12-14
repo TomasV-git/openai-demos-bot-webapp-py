@@ -5,6 +5,8 @@ import os
 import random
 import re
 import requests
+import json
+import openai
 
 from botbuilder.core import ActivityHandler, TurnContext
 from botbuilder.schema import Activity, ActivityTypes, ChannelAccount
@@ -15,6 +17,7 @@ from langchain.embeddings.openai import OpenAIEmbeddings
 from langchain.text_splitter import CharacterTextSplitter
 from langchain.vectorstores import FAISS
 from langchain.document_loaders import TextLoader
+
 
 from botbuilder.schema import (
     ConversationAccount,
@@ -43,21 +46,64 @@ from prompts import (CUSTOM_CHATBOT_PREFIX, WELCOME_MESSAGE)
 from prompts import COMBINE_QUESTION_PROMPT, COMBINE_PROMPT
 
 
+# from utils import get_search_results
+
 from typing import Any, Dict, List, Optional, Awaitable, Callable, Tuple, Type, Union
 from collections import OrderedDict
 import uuid
 
 import markdownify
 
+
+import requests
+from typing import Dict, List
+
+from langchain.chat_models import AzureChatOpenAI
+from langchain.agents import AgentExecutor, Tool, ZeroShotAgent
+from langchain.callbacks.manager import CallbackManager
+from langchain.agents import initialize_agent, AgentType
+from langchain.tools import BaseTool
+from langchain.utilities import BingSearchAPIWrapper
+
+from callbacks import StdOutCallbackHandler
+from prompts import BING_PROMPT_PREFIX
+
+from IPython.display import Markdown, HTML, display  
+
+# from dotenv import load_dotenv
+# load_dotenv("credentials.env")
+
+def printmd(string):
+    display(Markdown(string.replace("$","USD ")))
+
+# GPT-4 models are necessary for this feature. GPT-35-turbo will make mistakes multiple times on following system prompt instructions.
+MODEL_DEPLOYMENT_NAME = "gpt-4-turbo" 
+cb_handler = StdOutCallbackHandler()
+cb_manager = CallbackManager(handlers=[cb_handler])
 #####################
 
 
 # Env variables needed by langchain
-os.environ["OPENAI_API_BASE"] = os.environ.get("AZURE_OPENAI_ENDPOINT")
-os.environ["OPENAI_API_KEY"] = os.environ.get("AZURE_OPENAI_API_KEY")
+# os.environ["OPENAI_API_BASE"] = os.environ.get("AZURE_OPENAI_ENDPOINT")
+# os.environ["OPENAI_API_KEY"] = os.environ.get("AZURE_OPENAI_API_KEY")
 os.environ["OPENAI_API_VERSION"] = os.environ.get("AZURE_OPENAI_API_VERSION")
-os.environ["OPENAI_API_TYPE"] = "azure"
+# os.environ["OPENAI_API_TYPE"] = "azure"
 
+class MyBingSearch(BaseTool):
+    """Tool for a Bing Search Wrapper"""
+    
+    name = "@bing"
+    description = "useful when the questions includes the term: @bing.\n"
+
+    k: int = 5
+    
+    def _run(self, query: str) -> str:
+        bing = BingSearchAPIWrapper(k=self.k)
+        return bing.results(query,num_results=self.k)
+            
+    async def _arun(self, query: str) -> str:
+        """Use the tool asynchronously."""
+        raise NotImplementedError("This Tool does not support async")
       
 # Bot Class
 class MyBot(ActivityHandler):
@@ -82,111 +128,13 @@ class MyBot(ActivityHandler):
         "Historie byla resetována na počáteční stav."
     ]
 
-    # allowed content types for file upload
-    ALLOWED_CONTENT_TYPES = [
-        "text/plain",  # ".txt"
-        "text/markdown",  # ".md"
-    ]
-
-    # FAISS db 
-    db = None
-
+  
 
     def __init__(self):
         self.model_name = os.environ.get("AZURE_OPENAI_MODEL_NAME") 
-        self.llm = AzureChatOpenAI(deployment_name=self.model_name, temperature=0.7, max_tokens=600)
-
-    def get_search_results(self, query: str, indexes: list, 
-                       k: int = 5,
-                       reranker_threshold: int = 1,
-                       sas_token: str = "",
-                       vector_search: bool = False,
-                       similarity_k: int = 3, 
-                       query_vector: list = []) -> List[dict]:
-    
-        # headers = {'Content-Type': 'application/json','api-key': os.environ["AZURE_SEARCH_KEY"]}
-        # params = {'api-version': os.environ['AZURE_SEARCH_API_VERSION']}
-
-        agg_search_results = dict()
-        
-        for index in indexes:
-            # search_payload = {
-            #     "search": query,
-            #     "queryType": "semantic",
-            #     "semanticConfiguration": "my-semantic-config",
-            #     "count": "true",
-            #     "speller": "lexicon",
-            #     "queryLanguage": "en-us",
-            #     "captions": "extractive",
-            #     "answers": "extractive",
-            #     "top": k
-            # }
-            # if vector_search:
-            #     search_payload["vectors"]= [{"value": query_vector, "fields": "chunkVector","k": k}]
-            #     search_payload["select"]= "id, title, chunk, name, location"
-            # else:
-            #     search_payload["select"]= "id, title, chunks, language, name, location, vectorized"
-            
-
-            # resp = requests.post(os.environ['AZURE_SEARCH_ENDPOINT'] + "/indexes/" + index + "/docs/search",
-            #                 data=json.dumps(search_payload), headers=headers, params=params)
-
-            # search_results = resp.json()
-            docs = self.db.similarity_search_with_score(query)
-            agg_search_results[index] = docs
-        
-        content = dict()
-        ordered_content = OrderedDict()
-        
-        for index,search_results in agg_search_results.items():
-            for doc in search_results:
-                result = doc[0] # Document object
-                relevance_score = doc[1] # Relevance score
-                if relevance_score > reranker_threshold: # Show results that are at least N% of the max possible score=4
-                    tmp_id = self.generate_doc_id()
-                    content[tmp_id]={
-                                            "title": result.metadata["source"], # result['title'], 
-                                            "name": result.metadata["source"], # result['name'], 
-                                            "location": "none", # result['location'] + sas_token if result['location'] else "",
-                                            "caption": "none", # result['@search.captions'][0]['text'],
-                                            "index": index
-                                        }
-                    content[tmp_id]["chunk"]= result.page_content #result['chunk']
-                    content[tmp_id]["score"]= relevance_score # Uses the reranker score
-
-                    # if vector_search:
-                    #     content[tmp_id]["chunk"]= result['chunk']
-                    #     content[tmp_id]["score"]= result['@search.score'] # Uses the Hybrid RRF score
-                
-                    # else:
-                    #     content[tmp_id]["chunks"]= result['chunks']
-                    #     content[tmp_id]["language"]= result['language']
-                    #     content[tmp_id]["score"]= relevance_score # Uses the reranker score
-                    #     content[tmp_id]["vectorized"]= result['vectorized']
-                    
-        # After results have been filtered, sort and add the top k to the ordered_content
-        if vector_search:
-            topk = similarity_k
-        else:
-            topk = k*len(indexes)
-            
-        count = 0  # To keep track of the number of results added
-        for id in sorted(content, key=lambda x: content[x]["score"], reverse=True):
-            ordered_content[id] = content[id]
-            count += 1
-            if count >= topk:  # Stop after adding 5 results
-                break
-
-        return ordered_content
-
-    # currently a dummy function returns a random uuid
-    def generate_index(self):
-        return str(uuid.uuid4())    
-    
-    # currently a dummy function returns a random uuid
-    def generate_doc_id(self):
-        return str(uuid.uuid4())
-    
+        self.llm = AzureChatOpenAI(deployment_name=self.model_name, temperature=0, max_tokens=1000)  
+   
+   
     # format the response (convert html to markdown)
     def format_response(self, response):
         # return re.sub(r"(\n\s*)+\n+", "\n\n", response).strip()
@@ -196,103 +144,49 @@ class MyBot(ActivityHandler):
     
         return response.strip()
     
-    # store the uploaded file in FAISS db
-    def process_file(self, file: Attachment) -> str:
-        '''
-        Function to store the uploaded file in FAISS db.
-        It stores the file in ./upload folder and then load it into FAISS db.
-
-        Parameters:
-        file: Attachment object with content_url and name
-        '''
-        # file_download = FileDownloadInfo.deserialize(file.content)
-        file_folder = "./upload"
-
-        # create folder if not exist
-        if not os.path.exists(file_folder):
-            os.makedirs(file_folder)
-        file_path = os.path.join(file_folder, file.name)
-        response = requests.get(file.content_url, allow_redirects=True)
-        # response = requests.get(file_download.download_url, allow_redirects=True)
-        open(file_path, "wb").write(response.content)
-
-        # # read the file
-        # with open(file_path, "r") as f:
-        #     file_content_text = f.read()
-
-
-        # load the file int FAISS db
-        chunk_size = 1000
-        loader = TextLoader(file_path)
-        documents = loader.load()
-        text_splitter = CharacterTextSplitter(chunk_size=chunk_size, chunk_overlap=100)
-        docs = text_splitter.split_documents(documents)
-
-        embeddings = OpenAIEmbeddings()
-        warning_msg = ""
-        if (len(docs) > 16):
-            warning_msg = f"\U0001F6D1 Only the first 16 chunks will be loaded (got {len(docs) } chunks for chunk size = {chunk_size})"
-            docs = docs[:16]
-        
-        self.db = FAISS.from_documents(docs, embeddings)
-
-        return f"\U00002705  {file.name} uploaded - ask your questions!\n{warning_msg}"
-
     # ask GPT    
     def ask_gpt(self, session_id):
-        chatgpt_chain = LLMChain(
-                                llm=self.llm,
-                                prompt=self.prompt,
-                                verbose=False,
-                                memory=self.memory_dict[session_id]
-                                )
-        answer = chatgpt_chain.run(self.QUESTION)                        
-        return answer
+        # Now we declare our LLM object with the callback handler 
+
+        tools = [MyBingSearch(k=5)]
+        agent_executor = initialize_agent(tools, self.llm, agent=AgentType.ZERO_SHOT_REACT_DESCRIPTION, 
+                                agent_kwargs={'prefix':BING_PROMPT_PREFIX}, callback_manager=cb_manager)
+
+        # suffix = """
+        #     Begin!"
+
+        #     {chat_history}
+        #     Question: {input}
+        #     {agent_scratchpad}"""
+        # prompt = ZeroShotAgent.create_prompt(
+        #     tools,
+        #     prefix=BING_PROMPT_PREFIX,
+        #     suffix=suffix,
+        #     input_variables=["input", "chat_history", "agent_scratchpad"],
+        # )
+        # llm_chain = LLMChain(llm=self.llm, prompt=prompt)
+        # agent = ZeroShotAgent(llm_chain=llm_chain, tools=tools, verbose=True)
+        # agent_chain = AgentExecutor.from_agent_and_tools(
+        #     agent=agent, tools=tools, verbose=True, memory=self.memory_dict[session_id]
+        # )
+
+        QUESTION = self.QUESTION.strip()
+
+        printmd("### Question: " + QUESTION)
+
+        #As LLMs responses are never the same, we do a for loop in case the answer cannot be parsed according to our prompt instructions
+        for i in range(2):
+            try:
+                response = agent_executor.run(QUESTION) 
+                # response = agent_chain.run(QUESTION)
+                break
+            except Exception as e:
+                response = str(e)
+                continue
+        return self.format_response(response)
     
-    # ask GPT with sources in file
-    def ask_gpt_with_sources(self, session_id):
-        # remove the /file prefix
-        QUESTION = self.QUESTION[5:].strip()
-        
-        # query = "What did the president say about Ketanji Brown Jackson"
-        # docs = self.db.similarity_search_with_score(query)
-        vector_indexes = [self.generate_index()]
+   
 
-        ordered_results = self.get_search_results(QUESTION, vector_indexes, 
-                                                k=10,
-                                                reranker_threshold=0.1, #1
-                                                vector_search=True, 
-                                                similarity_k=10,
-                                                #query_vector = embedder.embed_query(QUESTION)
-                                                query_vector= []
-                                                )
-        # COMPLETION_TOKENS = 1000
-        # llm = AzureChatOpenAI(deployment_name=MODEL, temperature=0.5, max_tokens=COMPLETION_TOKENS)
-
-        top_docs = []
-        for key,value in ordered_results.items():
-            location = value["location"] if value["location"] is not None else ""
-            # top_docs.append(Document(page_content=value["chunk"], metadata={"source": location+os.environ['BLOB_SAS_TOKEN']}))
-            top_docs.append(Document(page_content=value["chunk"], metadata={"source": value["name"]}))
-                
-        # print("Number of chunks:",len(top_docs))
-
-        chain_type = "stuff"
-        
-        if chain_type == "stuff":
-            chain = load_qa_with_sources_chain(self.llm, chain_type=chain_type, 
-                                            prompt=COMBINE_PROMPT)
-        elif chain_type == "map_reduce":
-            chain = load_qa_with_sources_chain(self.llm, chain_type=chain_type, 
-                                            question_prompt=COMBINE_QUESTION_PROMPT,
-                                            combine_prompt=COMBINE_PROMPT,
-                                            return_intermediate_steps=True)
-
-
-        response = chain({"input_documents": top_docs, "question": QUESTION, "language": "English"})
-        text_output = self.format_response(response['output_text'])
-        return text_output
-    
     # Function to show welcome message to new users
     async def on_members_added_activity(self, members_added: ChannelAccount, turn_context: TurnContext):
         for member_added in members_added:
@@ -312,20 +206,6 @@ class MyBot(ActivityHandler):
         if session_id not in self.memory_dict:
             self.memory_dict[session_id] = ConversationBufferWindowMemory(memory_key="chat_history",input_key="question", return_messages=True, k=3)
 
-        message_with_file_download = (
-            False
-            if not turn_context.activity.attachments
-            # else turn_context.activity.attachments[0].content_type == "text/plain"
-            else turn_context.activity.attachments[0].content_type in self.ALLOWED_CONTENT_TYPES
-        )
-
-        # store the uploaded file in FAISS db and returns success message
-        if message_with_file_download:
-            file = turn_context.activity.attachments[0]
-            msg = self.process_file(file)
-            await turn_context.send_activity(msg)
-            return
-
         if (self.QUESTION == "/reset"):
             # self.memory.clear()
             self.memory_dict[session_id].clear()
@@ -335,12 +215,8 @@ class MyBot(ActivityHandler):
             # await turn_context.send_activity("Memory cleared")
         elif (self.QUESTION == "/help"):
             await turn_context.send_activity(WELCOME_MESSAGE + "\n\n" + self.model_name)
-        else:
-            # check if there is uploaded file and initialized FAISS db
-            if (self.db):
-                answer = self.ask_gpt_with_sources(session_id)
-            else:
-                answer = self.ask_gpt(session_id)
+        else:    
+            answer = self.ask_gpt(session_id)
             await turn_context.send_activity(answer)
 
 
