@@ -126,7 +126,7 @@ class MyBot(ActivityHandler):
         "Historie byla resetována na počáteční stav."
     ]
 
-  
+
 
     def __init__(self):
         self.model_name = os.environ.get("AZURE_OPENAI_MODEL_NAME") 
