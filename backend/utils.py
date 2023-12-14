@@ -281,19 +281,21 @@ def get_search_results(query: str, indexes: list,
         search_payload = {
             "search": query,
             "queryType": "semantic",
-            "semanticConfiguration": "my-semantic-config",
+            "semanticConfiguration": "default",
             "count": "true",
-            "speller": "lexicon",
-            "queryLanguage": "en-us",
+            # "speller": "lexicon",
+            # "queryLanguage": "cs-CZ",
             "captions": "extractive",
             "answers": "extractive",
             "top": k
         }
         if vector_search:
-            search_payload["vectors"]= [{"value": query_vector, "fields": "chunkVector","k": k}]
-            search_payload["select"]= "id, title, chunk, name, location"
+            # search_payload["vectors"]= [{"value": query_vector, "fields": "chunkVector","k": k}]
+            # search_payload["select"]= "id, title, chunk, name, location"
+            search_payload["vectors"]= [{"value": query_vector, "fields": "contentVector","k": k}]
+            search_payload["select"]= "id, title, content, file_name, file_uri"
         else:
-            search_payload["select"]= "id, title, chunks, language, name, location, vectorized"
+            search_payload["select"]= "id, title, chunks, language, name, location, vectorized" # TODO Change according to the index schema
         
 
         resp = requests.post(os.environ['AZURE_SEARCH_ENDPOINT'] + "/indexes/" + index + "/docs/search",
@@ -301,7 +303,7 @@ def get_search_results(query: str, indexes: list,
 
         search_results = resp.json()
         agg_search_results[index] = search_results
-    
+    # "Invalid language value: 'cs'. Supported languages for speller are: en-US, de-DE, fr-FR, es-ES, nl-NL\r\nParameter name: queryLanguage"
     content = dict()
     ordered_content = OrderedDict()
     
@@ -310,13 +312,13 @@ def get_search_results(query: str, indexes: list,
             if result['@search.rerankerScore'] > reranker_threshold: # Show results that are at least N% of the max possible score=4
                 content[result['id']]={
                                         "title": result['title'], 
-                                        "name": result['name'], 
-                                        "location": result['location'] + sas_token if result['location'] else "",
+                                        "name": result['file_name'], 
+                                        "location": result['file_uri'] + sas_token if result['file_uri'] else "",
                                         "caption": result['@search.captions'][0]['text'],
                                         "index": index
                                     }
                 if vector_search:
-                    content[result['id']]["chunk"]= result['chunk']
+                    content[result['id']]["chunk"]= result['content']
                     content[result['id']]["score"]= result['@search.score'] # Uses the Hybrid RRF score
               
                 else:
