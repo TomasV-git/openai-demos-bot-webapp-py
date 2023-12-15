@@ -202,14 +202,14 @@ class MyBot(ActivityHandler):
         if session_id not in self.memory_dict:
             self.memory_dict[session_id] = ConversationBufferWindowMemory(memory_key="chat_history",input_key="question", return_messages=True, k=3)
 
-        if (self.QUESTION == "/reset"):
+        if (self.QUESTION.strip() == "/reset"):
             # self.memory.clear()
             self.memory_dict[session_id].clear()
             self.db = None # reset the db
             # randomly pick one of the memory_cleared_messages
             await turn_context.send_activity(random.choice(self.memory_cleared_messages))
             # await turn_context.send_activity("Memory cleared")
-        elif (self.QUESTION == "/help"):
+        elif (self.QUESTION.strip() == "/help"):
             await turn_context.send_activity(WELCOME_MESSAGE + "\n\n" + self.model_name)
         else:    
             answer = self.ask_gpt(session_id)
