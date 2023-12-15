@@ -68,13 +68,11 @@ from langchain.utilities import BingSearchAPIWrapper
 from callbacks import StdOutCallbackHandler
 from prompts import BING_PROMPT_PREFIX
 
-from IPython.display import Markdown, HTML, display  
+# from IPython.display import Markdown, HTML, display  
 
 # from dotenv import load_dotenv
 # load_dotenv("credentials.env")
 
-def printmd(string):
-    display(Markdown(string.replace("$","USD ")))
 
 # GPT-4 models are necessary for this feature. GPT-35-turbo will make mistakes multiple times on following system prompt instructions.
 MODEL_DEPLOYMENT_NAME = "gpt-4-turbo" 
@@ -128,7 +126,7 @@ class MyBot(ActivityHandler):
         "Historie byla resetována na počáteční stav."
     ]
 
-  
+
 
     def __init__(self):
         self.model_name = os.environ.get("AZURE_OPENAI_MODEL_NAME") 
@@ -171,8 +169,6 @@ class MyBot(ActivityHandler):
         # )
 
         QUESTION = self.QUESTION.strip()
-
-        printmd("### Question: " + QUESTION)
 
         #As LLMs responses are never the same, we do a for loop in case the answer cannot be parsed according to our prompt instructions
         for i in range(2):
